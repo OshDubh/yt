@@ -5,7 +5,7 @@
   "apps": [
     {
       "name": "YouTube Plus",
-      "bundleIdentifier": "dev.osh.yt",
+      "bundleIdentifier": "com.google.ios.youtube",
       "developerName": "dayanch96 (built by OshDubh)",
       "subtitle": "YouTube with YTLite tweaks",
       "localizedDescription": "A flexible enhancer for YouTube on iOS — downloads, SponsorBlock, PiP, 4K, and more.",

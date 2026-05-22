@@ -44,7 +44,7 @@ jobs:
             --repo "$GITHUB_REPOSITORY" \
             -f ipa_url="${{ secrets.DECRYPTED_YT_URL }}" \
             -f tweak_version="${{ steps.upstream.outputs.ver }}" \
-            -f bundle_id="dev.osh.yt" \
+            -f bundle_id="com.google.ios.youtube" \
             -f display_name="YouTube" \
             -f enable_youpip=true \
             -f enable_ytuhd=false \
