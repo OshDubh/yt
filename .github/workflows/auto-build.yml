@@ -16,17 +16,22 @@ jobs:
       - name: Get latest upstream YTLite release
         id: upstream
         run: |
-          tag=$(curl -fsSL https://api.github.com/repos/dayanch96/YTLite/releases | jq -r 'map(select(.prerelease==false and (.tag_name|test("b[0-9]+$")|not))) | .[0].tag_name')
+          tag=$(curl -fsSL https://api.github.com/repos/dayanch96/YTLite/releases/latest | jq -r .tag_name)
+          ver=${tag#v}
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "ver=$ver" >> "$GITHUB_OUTPUT"
 
-      - name: Check if we've already built this
+      - name: Check if we've already built this tweak version
         id: check
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if gh release view "${{ steps.upstream.outputs.tag }}" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+          if gh release list --repo "$GITHUB_REPOSITORY" --limit 50 --json name -q '.[].name' \
+               | grep -qF "v${{ steps.upstream.outputs.ver }} "; then
+            echo "Already built tweak v${{ steps.upstream.outputs.ver }}"
             echo "build=false" >> "$GITHUB_OUTPUT"
           else
+            echo "Tweak v${{ steps.upstream.outputs.ver }} not yet built"
             echo "build=true"  >> "$GITHUB_OUTPUT"
           fi
 
@@ -38,7 +43,7 @@ jobs:
           gh workflow run main.yml \
             --repo "$GITHUB_REPOSITORY" \
             -f ipa_url="${{ secrets.DECRYPTED_YT_URL }}" \
-            -f tweak_version="${{ steps.upstream.outputs.tag }}" \
+            -f tweak_version="${{ steps.upstream.outputs.ver }}" \
             -f bundle_id="dev.osh.yt" \
             -f display_name="YouTube" \
             -f enable_youpip=true \

@@ -3,6 +3,9 @@ name: Update AltStore source
 on:
   release:
     types: [published, edited]
+  workflow_run:
+    workflows: ["Create YouTube Plus app"]
+    types: [completed]
   workflow_dispatch:
 
 permissions:
@@ -11,6 +14,7 @@ permissions:
 jobs:
   update-source:
     runs-on: ubuntu-latest
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -19,52 +23,62 @@ jobs:
 
       - name: Update source.json
         env:
-          RELEASE_JSON: ${{ toJson(github.event.release) }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
         run: |
           python3 <<'PY'
-          import json, os, re
+          import json, os, plistlib, subprocess, urllib.request, zipfile
 
-          release = json.loads(os.environ.get("RELEASE_JSON") or "{}")
-          if not release:
-              print("No release context (manual dispatch) — nothing to do.")
+          out = subprocess.check_output(
+              ['gh', 'api', f'repos/{os.environ["REPO"]}/releases'])
+          releases = json.loads(out)
+          rel = next((r for r in releases
+                      if not r['draft']
+                      and any(a['name'].lower().endswith('.ipa')
+                              for a in r['assets'])), None)
+          if not rel:
+              print("No published release with an IPA — nothing to do.")
               raise SystemExit(0)
 
-          assets = release.get("assets", [])
-          ipa = next((a for a in assets if a["name"].lower().endswith(".ipa")), None)
-          if not ipa:
-              print("No .ipa asset in this release — skipping.")
-              raise SystemExit(0)
+          asset = next(a for a in rel['assets']
+                       if a['name'].lower().endswith('.ipa'))
+          print(f"Found {asset['name']} in {rel['tag_name']}")
+          urllib.request.urlretrieve(asset['browser_download_url'], 'app.ipa')
 
-          tag = release["tag_name"]
-          ver_full = tag.lstrip("v")
-          m = re.match(r"^([\d.]+)(?:-(\d+))?$", ver_full)
-          version = m.group(1) if m else ver_full
-          build_version = m.group(2) if (m and m.group(2)) else "1"
+          with zipfile.ZipFile('app.ipa') as z:
+              info_path = next(n for n in z.namelist()
+                               if n.startswith('Payload/')
+                               and n.endswith('.app/Info.plist'))
+              with z.open(info_path) as f:
+                  plist = plistlib.load(f)
+
+          version = plist['CFBundleShortVersionString']
+          build   = str(plist.get('CFBundleVersion', '1'))
+          print(f"Version: {version}  BuildVersion: {build}")
 
           new_entry = {
               "version": version,
-              "buildVersion": build_version,
-              "date": release["published_at"],
-              "localizedDescription": (release.get("body") or "").strip() or f"Build {tag}",
-              "downloadURL": ipa["browser_download_url"],
-              "size": ipa["size"],
+              "buildVersion": build,
+              "date": rel['published_at'],
+              "localizedDescription":
+                  (rel.get('body') or '').strip() or rel['name'],
+              "downloadURL": asset['browser_download_url'],
+              "size": asset['size'],
               "minOSVersion": "14.0",
           }
 
-          with open("source.json", "r") as f:
+          with open('source.json') as f:
               src = json.load(f)
-
-          app = src["apps"][0]
-          versions = app.get("versions", [])
-          versions = [v for v in versions
-                      if not (v.get("version") == version
-                              and v.get("buildVersion") == build_version)]
+          app = src['apps'][0]
+          versions = [v for v in app.get('versions', [])
+                      if not (v.get('version') == version
+                              and v.get('buildVersion') == build)]
           versions.insert(0, new_entry)
-          app["versions"] = versions
+          app['versions'] = versions
 
-          with open("source.json", "w") as f:
+          with open('source.json', 'w') as f:
               json.dump(src, f, indent=2)
-              f.write("\n")
+              f.write('\n')
           PY
 
       - name: Commit and push
@@ -75,6 +89,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "No source.json changes."
           else
-            git commit -m "chore: update source.json for ${{ github.event.release.tag_name }}"
+            git commit -m "chore: update source.json"
             git push
           fi
