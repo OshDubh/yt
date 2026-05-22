@@ -1,0 +1,24 @@
+{
+  "name": "OshDubh YouTube Plus",
+  "identifier": "dev.osh.yt.source",
+  "sourceURL": "https://raw.githubusercontent.com/OshDubh/yt/main/source.json",
+  "apps": [
+    {
+      "name": "YouTube Plus",
+      "bundleIdentifier": "dev.osh.yt",
+      "developerName": "dayanch96 (built by OshDubh)",
+      "subtitle": "YouTube with YTLite tweaks",
+      "localizedDescription": "A flexible enhancer for YouTube on iOS — downloads, SponsorBlock, PiP, 4K, and more.",
+      "iconURL": "https://raw.githubusercontent.com/dayanch96/YTLite/main/Resources/scr1.jpg",
+      "tintColor": "FF0000",
+      "category": "entertainment",
+      "screenshotURLs": [],
+      "versions": [],
+      "appPermissions": {
+        "entitlements": [],
+        "privacy": []
+      }
+    }
+  ],
+  "news": []
+}

@@ -1,0 +1,49 @@
+name: Auto-build on upstream release
+
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  check-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get latest upstream YTLite release
+        id: upstream
+        run: |
+          tag=$(curl -fsSL https://api.github.com/repos/dayanch96/YTLite/releases | jq -r 'map(select(.prerelease==false and (.tag_name|test("b[0-9]+$")|not))) | .[0].tag_name')
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      - name: Check if we've already built this
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if gh release view "${{ steps.upstream.outputs.tag }}" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "build=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "build=true"  >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Trigger main build workflow
+        if: steps.check.outputs.build == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh workflow run main.yml \
+            --repo "$GITHUB_REPOSITORY" \
+            -f ipa_url="${{ secrets.DECRYPTED_YT_URL }}" \
+            -f tweak_version="${{ steps.upstream.outputs.tag }}" \
+            -f bundle_id="dev.osh.yt" \
+            -f display_name="YouTube" \
+            -f enable_youpip=true \
+            -f enable_ytuhd=false \
+            -f enable_yq=true \
+            -f enable_ryd=true \
+            -f enable_ytabc=true \
+            -f enable_demc=false

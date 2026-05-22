@@ -1,0 +1,80 @@
+name: Update AltStore source
+
+on:
+  release:
+    types: [published, edited]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update-source:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Update source.json
+        env:
+          RELEASE_JSON: ${{ toJson(github.event.release) }}
+        run: |
+          python3 <<'PY'
+          import json, os, re
+
+          release = json.loads(os.environ.get("RELEASE_JSON") or "{}")
+          if not release:
+              print("No release context (manual dispatch) — nothing to do.")
+              raise SystemExit(0)
+
+          assets = release.get("assets", [])
+          ipa = next((a for a in assets if a["name"].lower().endswith(".ipa")), None)
+          if not ipa:
+              print("No .ipa asset in this release — skipping.")
+              raise SystemExit(0)
+
+          tag = release["tag_name"]
+          ver_full = tag.lstrip("v")
+          m = re.match(r"^([\d.]+)(?:-(\d+))?$", ver_full)
+          version = m.group(1) if m else ver_full
+          build_version = m.group(2) if (m and m.group(2)) else "1"
+
+          new_entry = {
+              "version": version,
+              "buildVersion": build_version,
+              "date": release["published_at"],
+              "localizedDescription": (release.get("body") or "").strip() or f"Build {tag}",
+              "downloadURL": ipa["browser_download_url"],
+              "size": ipa["size"],
+              "minOSVersion": "14.0",
+          }
+
+          with open("source.json", "r") as f:
+              src = json.load(f)
+
+          app = src["apps"][0]
+          versions = app.get("versions", [])
+          versions = [v for v in versions
+                      if not (v.get("version") == version
+                              and v.get("buildVersion") == build_version)]
+          versions.insert(0, new_entry)
+          app["versions"] = versions
+
+          with open("source.json", "w") as f:
+              json.dump(src, f, indent=2)
+              f.write("\n")
+          PY
+
+      - name: Commit and push
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add source.json
+          if git diff --cached --quiet; then
+            echo "No source.json changes."
+          else
+            git commit -m "chore: update source.json for ${{ github.event.release.tag_name }}"
+            git push
+          fi
