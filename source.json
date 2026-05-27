@@ -1,14 +1,14 @@
 {
-  "name": "YouTube+",
+  "name": "YouTube Plus",
   "identifier": "dev.osh.yt.source",
   "sourceURL": "https://raw.githubusercontent.com/OshDubh/yt/main/source.json",
   "apps": [
     {
       "name": "YouTube Plus",
       "bundleIdentifier": "com.google.ios.youtube",
-      "developerName": "dayanch96 | oshdubh",
+      "developerName": "dayanch96 (built by oshdubh)",
       "subtitle": "YouTube with YTLite tweaks",
-      "localizedDescription": "YouTube Plus",
+      "localizedDescription": "YouTube Plus with YouPiP, YTUHD, Return YouTube Dislikes, YouQuality and SponsorBlock.",
       "iconURL": "https://raw.githubusercontent.com/OshDubh/yt/main/icon.png",
       "tintColor": "FF0000",
       "category": "entertainment",
