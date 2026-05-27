@@ -2,7 +2,7 @@ name: Auto-build on upstream release
 
 on:
   schedule:
-    - cron: "0 6 * * 1"    # every Monday 06:00 UTC
+    - cron: "0 6 * * 1"
   workflow_dispatch:
 
 permissions:
@@ -47,7 +47,7 @@ jobs:
             -f bundle_id="com.google.ios.youtube" \
             -f display_name="YouTube" \
             -f enable_youpip=true \
-            -f enable_ytuhd=false \
+            -f enable_ytuhd=true \
             -f enable_yq=true \
             -f enable_ryd=true \
             -f enable_ytabc=true \
