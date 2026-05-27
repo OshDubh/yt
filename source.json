@@ -8,12 +8,22 @@
       "bundleIdentifier": "com.google.ios.youtube",
       "developerName": "dayanch96 (built by OshDubh)",
       "subtitle": "YouTube with YTLite tweaks",
-      "localizedDescription": "A flexible enhancer for YouTube on iOS — downloads, SponsorBlock, PiP, 4K, and more.",
+      "localizedDescription": "A flexible enhancer for YouTube on iOS \u2014 downloads, SponsorBlock, PiP, 4K, and more.",
       "iconURL": "https://raw.githubusercontent.com/OshDubh/yt/main/icon.png",
       "tintColor": "FF0000",
       "category": "entertainment",
       "screenshotURLs": [],
-      "versions": [],
+      "versions": [
+        {
+          "version": "21.21.3",
+          "buildVersion": "21.21.3",
+          "date": "2026-05-22T23:33:21Z",
+          "localizedDescription": "YouTubePlus v5.2.1 (5)",
+          "downloadURL": "https://github.com/OshDubh/yt/releases/download/ytp-5/YouTubePlus_5.2.1.ipa",
+          "size": 137085565,
+          "minOSVersion": "14.0"
+        }
+      ],
       "appPermissions": {
         "entitlements": [],
         "privacy": []
