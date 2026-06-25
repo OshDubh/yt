@@ -44,35 +44,14 @@ jobs:
           fi
           echo "CDN matches expected version: $actual"
 
-      - name: Get latest YTLite tweak version
-        id: tweak
-        run: |
-          tag=$(curl -fsSL https://api.github.com/repos/dayanch96/YTLite/releases/latest | jq -r .tag_name)
-          ver=${tag#v}
-          echo "ver=$ver" >> "$GITHUB_OUTPUT"
-
-      - name: Trigger main build
+      - name: Trigger auto-build
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh workflow run main.yml \
-            --repo "$GITHUB_REPOSITORY" \
-            -f ipa_url="${{ secrets.DECRYPTED_YT_URL }}" \
-            -f tweak_version="${{ steps.tweak.outputs.ver }}" \
-            -f bundle_id="com.google.ios.youtube" \
-            -f display_name="YouTube" \
-            -f enable_youpip=true \
-            -f enable_ytuhd=true \
-            -f enable_yq=true \
-            -f enable_ryd=true \
-            -f enable_ytabc=true \
-            -f enable_demc=false
+        run: gh workflow run auto-build.yml --repo "$GITHUB_REPOSITORY"
 
       - name: Comment on issue
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh issue comment "${{ github.event.issue.number }}" --repo "$GITHUB_REPOSITORY" \
-            --body "✅ Triggered build with YT \`${ISSUE_TITLE#new yt app version: }\` and tweak \`v${{ steps.tweak.outputs.ver }}\`. Watch: https://github.com/$GITHUB_REPOSITORY/actions"
-        env:
-          ISSUE_TITLE: ${{ github.event.issue.title }}
+            --body "✅ Triggered build. Watch: https://github.com/$GITHUB_REPOSITORY/actions"
