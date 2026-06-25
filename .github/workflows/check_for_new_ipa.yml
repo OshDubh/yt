@@ -7,12 +7,15 @@ on:
 
 permissions:
   contents: read
+  issues: write
 
 jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - name: Compare versions
+      - name: Compare and notify
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           appstore=$(curl -s "https://itunes.apple.com/lookup?id=544007664" | jq -r '.results[0].version')
           current=$(curl -s "https://raw.githubusercontent.com/${{ github.repository }}/main/source.json" | jq -r '.apps[0].versions[0].version')
@@ -25,9 +28,35 @@ jobs:
           echo "Source:    $current   ($c)"
 
           if [ "$a" = "$c" ]; then
-            echo "::notice::Up to date."
+            echo "Up to date."
             exit 0
           fi
 
-          echo "::error title=YT IPA update needed::App Store YouTube is now ${appstore} but source ships ${current}. Replace https://cdn.osh.dev/dev.osh.yt.ipa with the new decrypted IPA, then run main.yml."
-          exit 1
+          title="new yt app version: $appstore"
+
+          if gh issue list --repo "$GITHUB_REPOSITORY" --state open \
+               --search "\"$title\" in:title" \
+               --json number -q '.[].number' | grep -q .; then
+            echo "Issue already open for $appstore."
+            exit 0
+          fi
+
+          cat > /tmp/issue-body.md <<EOF
+          current version is $current. new is $appstore.
+          1. app download: \`$appstore\` IPA from <https://decrypt.day/app/id544007664>
+          2. app upload: \`https://cdn.osh.dev/dev.osh.yt.ipa\`
+          3. rebuild with:
+             \`\`\`
+             gh workflow run main.yml --repo $GITHUB_REPOSITORY \\
+               -f ipa_url="https://cdn.osh.dev/dev.osh.yt.ipa" \\
+               -f tweak_version="5.2.1" \\
+               -f bundle_id="com.google.ios.youtube" \\
+               -f display_name="YouTube" \\
+               -f enable_youpip=true -f enable_ytuhd=true -f enable_yq=true \\
+               -f enable_ryd=true -f enable_ytabc=true -f enable_demc=false
+             \`\`\`
+          EOF
+
+          gh issue create --repo "$GITHUB_REPOSITORY" \
+            --title "$title" \
+            --body-file /tmp/issue-body.md
