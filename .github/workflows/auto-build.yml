@@ -21,18 +21,23 @@ jobs:
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
           echo "ver=$ver" >> "$GITHUB_OUTPUT"
 
-      - name: Check if we've already built this tweak version
+      - name: Decide whether to build
         id: check
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          if [ "${{ github.event_name }}" != "schedule" ]; then
+            echo "Manual/triggered dispatch — bypassing dedup."
+            echo "build=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           if gh release list --repo "$GITHUB_REPOSITORY" --limit 50 --json name -q '.[].name' \
                | grep -qF "v${{ steps.upstream.outputs.ver }} "; then
-            echo "Already built tweak v${{ steps.upstream.outputs.ver }}"
+            echo "Already built tweak v${{ steps.upstream.outputs.ver }} — skipping."
             echo "build=false" >> "$GITHUB_OUTPUT"
           else
-            echo "Tweak v${{ steps.upstream.outputs.ver }} not yet built"
-            echo "build=true"  >> "$GITHUB_OUTPUT"
+            echo "Tweak v${{ steps.upstream.outputs.ver }} not yet built."
+            echo "build=true" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Trigger main build workflow
