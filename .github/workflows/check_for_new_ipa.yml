@@ -44,17 +44,8 @@ jobs:
           cat > /tmp/issue-body.md <<EOF
           current version is $current. new is $appstore.
           1. app download: \`$appstore\` IPA from <https://decrypt.day/app/id544007664>
-          2. app upload: \`https://cdn.osh.dev/dev.osh.yt.ipa\`
-          3. rebuild with:
-             \`\`\`
-             gh workflow run main.yml --repo $GITHUB_REPOSITORY \\
-               -f ipa_url="https://cdn.osh.dev/dev.osh.yt.ipa" \\
-               -f tweak_version="5.2.1" \\
-               -f bundle_id="com.google.ios.youtube" \\
-               -f display_name="YouTube" \\
-               -f enable_youpip=true -f enable_ytuhd=true -f enable_yq=true \\
-               -f enable_ryd=true -f enable_ytabc=true -f enable_demc=false
-             \`\`\`
+          2. app upload
+          3. close to rebuild
           EOF
 
           gh issue create --repo "$GITHUB_REPOSITORY" \
