@@ -15,6 +15,15 @@
       "screenshotURLs": [],
       "versions": [
         {
+          "version": "21.25.5",
+          "buildVersion": "21.25.5",
+          "date": "2026-06-25T13:10:25Z",
+          "localizedDescription": "YouTubePlus v5.2.1 (9)",
+          "downloadURL": "https://github.com/OshDubh/yt/releases/download/ytp-9/YouTubePlus_5.2.1.ipa",
+          "size": 136621603,
+          "minOSVersion": "14.0"
+        },
+        {
           "version": "21.21.3",
           "buildVersion": "21.21.3",
           "date": "2026-06-22T12:12:16Z",
