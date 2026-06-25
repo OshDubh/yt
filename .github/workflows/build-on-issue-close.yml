@@ -1,0 +1,78 @@
+name: Build on YT issue close
+
+on:
+  issues:
+    types: [closed]
+
+permissions:
+  contents: read
+  actions: write
+  issues: write
+
+jobs:
+  build:
+    if: startsWith(github.event.issue.title, 'new yt app version:')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify CDN IPA matches issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          CDN_URL: ${{ secrets.DECRYPTED_YT_URL }}
+        run: |
+          expected="${ISSUE_TITLE#new yt app version: }"
+
+          curl -sL -o /tmp/check.ipa "$CDN_URL"
+          actual=$(python3 <<'PY'
+          import zipfile, plistlib
+          with zipfile.ZipFile('/tmp/check.ipa') as z:
+              p = next(n for n in z.namelist()
+                       if n.startswith('Payload/') and n.endswith('.app/Info.plist'))
+              with z.open(p) as f:
+                  print(plistlib.load(f)['CFBundleShortVersionString'])
+          PY
+          )
+
+          norm() { echo "$1" | awk -F. '{printf "%d.%d.%d", $1, $2, ($3==""?0:$3)}'; }
+          if [ "$(norm "$expected")" != "$(norm "$actual")" ]; then
+            gh issue reopen "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY"
+            gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" \
+              --body "CDN IPA reports version \`$actual\` but this issue expects \`$expected\`. Did you forget to upload? Reopening — close again once the CDN has the right file."
+            echo "::error::Version mismatch — expected $expected, CDN has $actual."
+            exit 1
+          fi
+          echo "CDN matches expected version: $actual"
+
+      - name: Get latest YTLite tweak version
+        id: tweak
+        run: |
+          tag=$(curl -fsSL https://api.github.com/repos/dayanch96/YTLite/releases/latest | jq -r .tag_name)
+          ver=${tag#v}
+          echo "ver=$ver" >> "$GITHUB_OUTPUT"
+
+      - name: Trigger main build
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh workflow run main.yml \
+            --repo "$GITHUB_REPOSITORY" \
+            -f ipa_url="${{ secrets.DECRYPTED_YT_URL }}" \
+            -f tweak_version="${{ steps.tweak.outputs.ver }}" \
+            -f bundle_id="com.google.ios.youtube" \
+            -f display_name="YouTube" \
+            -f enable_youpip=true \
+            -f enable_ytuhd=true \
+            -f enable_yq=true \
+            -f enable_ryd=true \
+            -f enable_ytabc=true \
+            -f enable_demc=false
+
+      - name: Comment on issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue comment "${{ github.event.issue.number }}" --repo "$GITHUB_REPOSITORY" \
+            --body "✅ Triggered build with YT \`${ISSUE_TITLE#new yt app version: }\` and tweak \`v${{ steps.tweak.outputs.ver }}\`. Watch: https://github.com/$GITHUB_REPOSITORY/actions"
+        env:
+          ISSUE_TITLE: ${{ github.event.issue.title }}
