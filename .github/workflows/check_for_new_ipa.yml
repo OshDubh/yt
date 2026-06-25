@@ -2,46 +2,32 @@ name: Check if a new YouTube IPA is available
 
 on:
   schedule:
-    - cron: "0 6 * * 1"
+    - cron: "0 7 * * *"
   workflow_dispatch:
 
 permissions:
   contents: read
-  issues: write
 
 jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - name: compare versions + notify
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Compare versions
         run: |
           appstore=$(curl -s "https://itunes.apple.com/lookup?id=544007664" | jq -r '.results[0].version')
           current=$(curl -s "https://raw.githubusercontent.com/${{ github.repository }}/main/source.json" | jq -r '.apps[0].versions[0].version')
 
-          # normalise to numeric tuple, "21.21.3" == "21.21.03"
           norm() { echo "$1" | awk -F. '{printf "%d.%d.%d", $1, $2, ($3==""?0:$3)}'; }
           a=$(norm "$appstore")
           c=$(norm "$current")
 
-          echo "App Store: $appstore ($a)"
-          echo "Current:   $current  ($c)"
+          echo "App Store: $appstore  ($a)"
+          echo "Source:    $current   ($c)"
 
           if [ "$a" = "$c" ]; then
-            echo "Up to date."
+            echo "::notice::Up to date."
             exit 0
           fi
 
-          # skip if the issue is already open
-          if gh issue list --repo "$GITHUB_REPOSITORY" --state open \
-               --search "New YouTube IPA available: $appstore in:title" \
-               --json number -q '.[].number' | grep -q .; then
-            echo "Issue already open for $appstore."
-            exit 0
-          fi
-
-          gh issue create --repo "$GITHUB_REPOSITORY" \
-            --title "New YouTube IPA available: $appstore" \
-            --body "The App Store's YouTube version is now **$appstore**. The currently built version is **$current**.
-          https://decrypt.day/app/id544007664
+          echo "::error title=YT IPA update needed::App Store YouTube is now ${appstore} but source ships ${current}. Replace https://cdn.osh.dev/dev.osh.yt.ipa with the new decrypted IPA, then run main.yml."
+          exit 1
