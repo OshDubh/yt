@@ -1,11 +1,6 @@
 name: Update AltStore source
 
 on:
-  release:
-    types: [published, edited]
-  workflow_run:
-    workflows: ["Create YouTube Plus app"]
-    types: [completed]
   workflow_dispatch:
 
 permissions:
@@ -14,7 +9,6 @@ permissions:
 jobs:
   update-source:
     runs-on: ubuntu-latest
-    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
